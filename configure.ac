@@ -1,8 +1,8 @@
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
-m4_define([v_maj], [4])
+m4_define([v_maj], [5])
 m4_define([v_min], [1])
-m4_define([v_mic], [0])
+m4_define([v_mic], [1])
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 m4_define([v_ver], [v_maj.v_min.v_mic])
 m4_define([lt_rev], m4_eval(v_maj + v_min))
@@ -11,7 +11,7 @@ m4_define([lt_age], v_min)
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 ##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##--##
 
-AC_INIT([sgminer], [v_ver], [veox@wemakethings.net], [sgminer], [https://github.com/veox/sgminer])
+AC_INIT([sgminer], [v_ver], [veox@wemakethings.net], [sgminer], [https://github.com/sgminer-dev/sgminer])
 
 AC_PREREQ(2.59)
 AC_CANONICAL_SYSTEM
@@ -245,8 +245,8 @@ AM_CONDITIONAL([HAVE_CURSES], [test x$curses = xyes])
 AM_CONDITIONAL([HAVE_WINDOWS], [test x$have_win32 = xtrue])
 AM_CONDITIONAL([HAVE_x86_64], [test x$have_x86_64 = xtrue])
 
-AC_CONFIG_SUBDIRS([compat/jansson-2.5])
-JANSSON_LIBS="compat/jansson-2.5/src/.libs/libjansson.a"
+AC_CONFIG_SUBDIRS([submodules/jansson])
+JANSSON_LIBS="submodules/jansson/src/.libs/libjansson.a"
 
 PKG_PROG_PKG_CONFIG()
 
@@ -295,12 +295,21 @@ fi
 AM_CONDITIONAL(USE_GIT_VERSION, [test x$usegitver = xyes])
 
 #check execv signature
-AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-		   #include <process.h>
-		   int execv(const char*, char *const*);
-		   ])],
-		   AC_DEFINE([EXECV_2ND_ARG_TYPE], [char* const*], [int execv(const char*, char*const*);]),
-		   AC_DEFINE([EXECV_2ND_ARG_TYPE], [const char* const*], [int execv(const char*, const char*const*);]))
+if test "x$have_linux" == xtrue; then
+    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+           #include <unistd.h>
+           int execv(const char*, char *const*);
+           ])],
+           AC_DEFINE([EXECV_2ND_ARG_TYPE], [char* const*], [int execv(const char*, char*const*);]),
+           AC_DEFINE([EXECV_2ND_ARG_TYPE], [const char* const*], [int execv(const char*, const char*const*);]))
+else
+    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+           #include <process.h>
+           int execv(const char*, char *const*);
+           ])],
+           AC_DEFINE([EXECV_2ND_ARG_TYPE], [char* const*], [int execv(const char*, char*const*);]),
+           AC_DEFINE([EXECV_2ND_ARG_TYPE], [const char* const*], [int execv(const char*, const char*const*);]))
+fi
 
 dnl CCAN wants to know a lot of vars.
 # All the configuration checks.  Regrettably, the __attribute__ checks will
@@ -340,23 +349,6 @@ fi
 
 AC_DEFINE_UNQUOTED([SGMINER_PREFIX], ["$prefix/bin"], [Path to sgminer install])
 
-AC_DEFINE_UNQUOTED([ALEXKARNEW_KERNNAME], ["alexkarnew"], [Filename for Alexey Karimov's optimised kernel for Catalyst >=13.4])
-AC_DEFINE_UNQUOTED([ALEXKAROLD_KERNNAME], ["alexkarold"], [Filename for Alexey Karimov's optimised kernel for Catalyst <13.4])
-AC_DEFINE_UNQUOTED([CKOLIVAS_KERNNAME], ["ckolivas"], [Filename for original scrypt kernel])
-AC_DEFINE_UNQUOTED([ZUIKKIS_KERNNAME], ["zuikkis"], [Filename for Zuikkis' optimised kernel])
-AC_DEFINE_UNQUOTED([PSW_KERNNAME], ["psw"], [Filename for psw's experimental kernel])
-AC_DEFINE_UNQUOTED([DARKCOIN_KERNNAME], ["darkcoin"], [Filename for DarkCoin optimised kernel])
-AC_DEFINE_UNQUOTED([QUBITCOIN_KERNNAME], ["qubitcoin"], [Filename for QubitCoin optimised kernel])
-AC_DEFINE_UNQUOTED([QUARKCOIN_KERNNAME], ["quarkcoin"], [Filename for QuarkCoin optimised kernel])
-AC_DEFINE_UNQUOTED([MYRIADCOIN_GROESTL_KERNNAME], ["myriadcoin-groestl"], [Filename for MyriadCoin-Groestl optimised kernel])
-AC_DEFINE_UNQUOTED([FUGUECOIN_KERNNAME], ["fuguecoin"], [Filename for FugueCoin optimised kernel])
-AC_DEFINE_UNQUOTED([INKCOIN_KERNNAME], ["inkcoin"], [Filename for InkCoin optimised kernel])
-AC_DEFINE_UNQUOTED([ANIMECOIN_KERNNAME], ["animecoin"], [Filename for AnimeCoin optimised kernel])
-AC_DEFINE_UNQUOTED([GROESTLCOIN_KERNNAME], ["groestlcoin"], [Filename for GroestlCoin optimised kernel])
-AC_DEFINE_UNQUOTED([SIFCOIN_KERNNAME], ["sifcoin"], [Filename for Sifcoin optimised kernel])
-AC_DEFINE_UNQUOTED([TWECOIN_KERNNAME], ["twecoin"], [Filename for Twecoin optimised kernel])
-AC_DEFINE_UNQUOTED([MARUCOIN_KERNNAME], ["marucoin"], [Filename for MaruCoin optimised kernel])
-
 AC_SUBST(OPENCL_LIBS)
 AC_SUBST(OPENCL_FLAGS)
 AC_SUBST(JANSSON_LIBS)
@@ -373,7 +365,7 @@ AC_SUBST(ADL_CPPFLAGS)
 
 AC_CONFIG_FILES([
 	Makefile
-	compat/Makefile
+	submodules/Makefile
 	ccan/Makefile
 	lib/Makefile
 	sph/Makefile
